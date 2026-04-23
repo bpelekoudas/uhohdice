@@ -55,6 +55,10 @@
     </div>
 
     <div class="controls">
+      <div class="wager-container">
+        <label for="wager-input" class="wager-label">Wager: $</label>
+        <input type="number" id="wager-input" class="wager-input" value="10" min="1" step="1">
+      </div>
       <button id="throw-btn" class="throw-btn">THROW DICE</button>
     </div>
   </div>
@@ -74,6 +78,7 @@
     const die2El = document.getElementById('die2');
     const playArea = document.getElementById('play-area');
     const wall = document.getElementById('wall');
+    const wagerInput = document.getElementById('wager-input');
 
     let isThrowing = false;
 
@@ -89,6 +94,20 @@
         messagesEl.className = 'messages loss';
       } else {
         messagesEl.className = 'messages';
+      }
+
+      // Handle wager input state
+      if (result.point !== null) {
+        // Point is set, disable wager changing during the round
+        wagerInput.disabled = true;
+      } else {
+        // Round is over (or hasn't started), allow wagering
+        wagerInput.disabled = false;
+
+        // Optional: Ensure wager doesn't exceed new bankroll
+        if (parseInt(wagerInput.value) > result.bankroll) {
+           wagerInput.value = result.bankroll;
+        }
       }
     }
 
@@ -134,7 +153,7 @@
       // The dice container moves up quickly, mimicking a strong throw
       diceContainer.style.transition = 'transform 0.4s ease-out';
 
-      const throwDistance = isShortRoll ? -150 : -350; // -350 hits the wall, -150 falls short
+      const throwDistance = isShortRoll ? -150 : -290; // -290 hits the wall, -150 falls short
       diceContainer.style.transform = `translateY(${throwDistance}px)`;
 
       // Both dice spin fast initially
@@ -166,7 +185,7 @@
           // 2. Bounce off the wall
           // Slower bounce back down into the play area
           diceContainer.style.transition = 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)';
-          diceContainer.style.transform = `translateY(-150px)`; // Bounce back to mid-screen
+          diceContainer.style.transform = `translateY(-100px)`; // Bounce back to mid-screen
 
           // Slow down the tumbling to the final face
           die1El.style.transition = 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)';
@@ -181,7 +200,17 @@
 
           // Wait for bounce to finish (600ms) before evaluating result
           setTimeout(() => {
-            const result = game.handleRoll(d1, d2);
+            // Read the wager amount from the input field
+            let wagerAmount = parseInt(wagerInput.value, 10);
+            if (isNaN(wagerAmount) || wagerAmount < 1) wagerAmount = 1;
+
+            // Prevent betting more than available bankroll
+            if (wagerAmount > game.bankroll && game.point === null) {
+              wagerAmount = game.bankroll;
+              wagerInput.value = wagerAmount;
+            }
+
+            const result = game.handleRoll(d1, d2, wagerAmount);
             updateUI(result);
 
             // Reset dice container position after a delay
@@ -195,6 +224,14 @@
         }
       }, 400); // Wait for initial throw to hit wall
     }
+
+    // Initialize UI on load so wager field acts correctly initially
+    updateUI({
+      bankroll: game.bankroll,
+      point: game.point,
+      message: 'Set your wager and hit the wall!',
+      status: 'CONTINUE'
+    });
 
     throwBtn.addEventListener('click', throwDice);
 
