@@ -306,3 +306,39 @@ body {
 .throw-btn:hover {
   background-color: #d35400;
 }
+
+/* Overlay Text Graphic */
+.overlay-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 6rem;
+  font-weight: 900;
+  text-shadow: 2px 2px 4px #000, 0 0 10px rgba(0,0,0,0.8);
+  pointer-events: none;
+  z-index: 40;
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out, transform 0.3s ease-out;
+}
+
+.overlay-text:not(.hidden) {
+  opacity: 1;
+  transform: translate(-50%, -60%);
+  animation: popUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.overlay-text.win {
+  color: #4caf50;
+  text-shadow: 2px 2px 0px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 20px #4caf50;
+}
+
+.overlay-text.loss {
+  color: #f44336;
+  text-shadow: 2px 2px 0px #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 20px #f44336;
+}
+
+@keyframes popUp {
+  0% { transform: translate(-50%, -40%) scale(0.5); opacity: 0; }
+  100% { transform: translate(-50%, -60%) scale(1); opacity: 1; }
+}

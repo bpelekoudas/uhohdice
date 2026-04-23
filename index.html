@@ -33,6 +33,8 @@
       <!-- Overlays for Win / Loss -->
       <img src="https://media.giphy.com/media/hrQnFqUKTXwSSvH8AI/giphy.gif" alt="Winner Rain" class="overlay hidden" id="overlay-win">
       <img src="assets/loser.png" alt="Loser" class="overlay hidden" id="overlay-loss">
+      <div id="overlay-text" class="overlay-text hidden"></div>
+
 
       <div class="dice-container" id="dice-container">
         <div class="scene">
@@ -85,6 +87,7 @@
     const wagerInput = document.getElementById('wager-input');
     const overlayWin = document.getElementById('overlay-win');
     const overlayLoss = document.getElementById('overlay-loss');
+    const overlayText = document.getElementById('overlay-text');
 
     let isThrowing = false;
 
@@ -96,16 +99,29 @@
       // Hide overlays by default
       overlayWin.classList.add('hidden');
       overlayLoss.classList.add('hidden');
+      if(overlayText) overlayText.classList.add('hidden');
 
       // Add a class for visual feedback based on win/loss and show overlays
+      const wagerAmount = parseInt(wagerInput.value, 10) || 0;
       if (result.status === 'WIN') {
-        messagesEl.className = 'messages win';
+        messagesEl.className = 'messages win-text';
         overlayWin.classList.remove('hidden');
+        if(overlayText) {
+          overlayText.textContent = `+$${wagerAmount}`;
+          overlayText.className = 'overlay-text win';
+          overlayText.classList.remove('hidden');
+        }
       } else if (result.status === 'LOSS') {
-        messagesEl.className = 'messages loss';
+        messagesEl.className = 'messages loss-text';
         overlayLoss.classList.remove('hidden');
+        if(overlayText) {
+          overlayText.textContent = `-$${wagerAmount}`;
+          overlayText.className = 'overlay-text loss';
+          overlayText.classList.remove('hidden');
+        }
       } else {
         messagesEl.className = 'messages';
+        if(overlayText) overlayText.classList.add('hidden');
       }
 
       // Handle wager input state
@@ -144,6 +160,7 @@
       // Hide overlays as soon as a new throw starts
       overlayWin.classList.add('hidden');
       overlayLoss.classList.add('hidden');
+      if(overlayText) overlayText.classList.add('hidden');
 
       // Decide result early so we can compute target rotation
       const isShortRoll = Math.random() < 0.1;
