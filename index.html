@@ -31,8 +31,26 @@
       <div class="wall" id="wall">WALL (Hit this!)</div>
 
       <div class="dice-container" id="dice-container">
-        <div class="die" id="die1">1</div>
-        <div class="die" id="die2">1</div>
+        <div class="scene">
+          <div class="die" id="die1">
+            <div class="face front"><span class="pip"></span></div>
+            <div class="face back"><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span></div>
+            <div class="face right"><span class="pip"></span><span class="pip"></span><span class="pip"></span></div>
+            <div class="face left"><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span></div>
+            <div class="face top"><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span></div>
+            <div class="face bottom"><span class="pip"></span><span class="pip"></span></div>
+          </div>
+        </div>
+        <div class="scene">
+          <div class="die" id="die2">
+            <div class="face front"><span class="pip"></span></div>
+            <div class="face back"><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span></div>
+            <div class="face right"><span class="pip"></span><span class="pip"></span><span class="pip"></span></div>
+            <div class="face left"><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span></div>
+            <div class="face top"><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span></div>
+            <div class="face bottom"><span class="pip"></span><span class="pip"></span></div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -64,9 +82,6 @@
       pointEl.textContent = result.point === null ? 'None' : result.point;
       messagesEl.textContent = result.message;
 
-      die1El.textContent = result.dice1;
-      die2El.textContent = result.dice2;
-
       // Add a class for visual feedback based on win/loss
       if (result.status === 'WIN') {
         messagesEl.className = 'messages win';
@@ -77,32 +92,61 @@
       }
     }
 
+    function getRotation(value) {
+      switch (value) {
+        case 1: return { x: 0, y: 0 };
+        case 2: return { x: 90, y: 0 };  // bottom face
+        case 3: return { x: 0, y: -90 }; // right face
+        case 4: return { x: 0, y: 90 };  // left face
+        case 5: return { x: -90, y: 0 }; // top face
+        case 6: return { x: 0, y: 180 }; // back face
+        default: return { x: 0, y: 0 };
+      }
+    }
+
     function throwDice() {
       if (isThrowing) return;
       isThrowing = true;
       messagesEl.className = 'messages';
       messagesEl.textContent = 'Throwing...';
 
-      // Reset dice position
+      // Decide result early so we can compute target rotation
+      const isShortRoll = Math.random() < 0.1;
+      const d1 = Math.floor(Math.random() * 6) + 1;
+      const d2 = Math.floor(Math.random() * 6) + 1;
+
+      const rot1 = getRotation(d1);
+      const rot2 = getRotation(d2);
+
+      // Reset container and dice position/rotation
       diceContainer.style.transition = 'none';
-      diceContainer.style.transform = 'translateY(0) rotate(0deg)';
+      diceContainer.style.transform = 'translateY(0)';
+
+      die1El.style.transition = 'none';
+      die1El.style.transform = `rotateX(0deg) rotateY(0deg)`;
+      die2El.style.transition = 'none';
+      die2El.style.transform = `rotateX(0deg) rotateY(0deg)`;
 
       // Force reflow
       void diceContainer.offsetWidth;
 
-      // Simple physics simulation logic for the throw
-      // We'll give it a chance to be a "Short Roll" (e.g., 10% chance)
-      const isShortRoll = Math.random() < 0.1;
-
-      // Animate the throw
+      // Animate the throw (container moves up)
       diceContainer.style.transition = 'transform 0.8s cubic-bezier(0.25, 1, 0.5, 1)';
 
       // "wall" is at the top of the play-area.
-      // We translate the dice container upwards.
-      const throwDistance = isShortRoll ? -150 : -350; // -350 hits the wall in our layout, -150 falls short
-      const rotation = Math.floor(Math.random() * 360) + 360;
+      const throwDistance = isShortRoll ? -150 : -350; // -350 hits the wall, -150 falls short
+      diceContainer.style.transform = `translateY(${throwDistance}px)`;
 
-      diceContainer.style.transform = `translateY(${throwDistance}px) rotate(${rotation}deg)`;
+      // Animate the tumble (dice rotate)
+      die1El.style.transition = 'transform 0.8s cubic-bezier(0.25, 1, 0.5, 1)';
+      die2El.style.transition = 'transform 0.8s cubic-bezier(0.25, 1, 0.5, 1)';
+
+      // Tumble with extra 360-degree rotations
+      const tumble1 = { x: rot1.x + 720, y: rot1.y + 720 };
+      const tumble2 = { x: rot2.x + 720, y: rot2.y - 720 };
+
+      die1El.style.transform = `rotateX(${tumble1.x}deg) rotateY(${tumble1.y}deg)`;
+      die2El.style.transform = `rotateX(${tumble2.x}deg) rotateY(${tumble2.y}deg)`;
 
       setTimeout(() => {
         if (isShortRoll) {
@@ -110,20 +154,15 @@
           messagesEl.className = 'messages short-roll';
         } else {
           // Valid roll
-          const d1 = Math.floor(Math.random() * 6) + 1;
-          const d2 = Math.floor(Math.random() * 6) + 1;
-
-          die1El.textContent = d1;
-          die2El.textContent = d2;
-
           const result = game.handleRoll(d1, d2);
           updateUI(result);
         }
 
-        // Reset dice position after a delay
+        // Reset dice container position after a delay
         setTimeout(() => {
           diceContainer.style.transition = 'transform 0.5s ease-in';
-          diceContainer.style.transform = 'translateY(0) rotate(0deg)';
+          diceContainer.style.transform = 'translateY(0)';
+
           setTimeout(() => {
             isThrowing = false;
           }, 500);
