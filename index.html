@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Street Dice</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="game-container">
+    <div class="header">
+      <h1>Street Dice</h1>
+      <div class="stats">
+        <div class="stat-box">
+          <span class="label">Bankroll:</span>
+          <span id="bankroll" class="value">$1000</span>
+        </div>
+        <div class="stat-box">
+          <span class="label">Point:</span>
+          <span id="point" class="value">None</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="messages" id="messages">
+      Ready to roll? Hit the wall to count!
+    </div>
+
+    <!-- The game area serves as the "street" with the "wall" at the top -->
+    <div class="play-area" id="play-area">
+      <div class="wall" id="wall">WALL (Hit this!)</div>
+
+      <div class="dice-container" id="dice-container">
+        <div class="die" id="die1">1</div>
+        <div class="die" id="die2">1</div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button id="throw-btn" class="throw-btn">THROW DICE</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { GameState } from './shared/logic.js';
+
+    const game = new GameState();
+
+    // UI Elements
+    const bankrollEl = document.getElementById('bankroll');
+    const pointEl = document.getElementById('point');
+    const messagesEl = document.getElementById('messages');
+    const throwBtn = document.getElementById('throw-btn');
+    const diceContainer = document.getElementById('dice-container');
+    const die1El = document.getElementById('die1');
+    const die2El = document.getElementById('die2');
+    const playArea = document.getElementById('play-area');
+    const wall = document.getElementById('wall');
+
+    let isThrowing = false;
+
+    function updateUI(result) {
+      bankrollEl.textContent = `$${result.bankroll}`;
+      pointEl.textContent = result.point === null ? 'None' : result.point;
+      messagesEl.textContent = result.message;
+
+      die1El.textContent = result.dice1;
+      die2El.textContent = result.dice2;
+
+      // Add a class for visual feedback based on win/loss
+      if (result.status === 'WIN') {
+        messagesEl.className = 'messages win';
+      } else if (result.status === 'LOSS') {
+        messagesEl.className = 'messages loss';
+      } else {
+        messagesEl.className = 'messages';
+      }
+    }
+
+    function throwDice() {
+      if (isThrowing) return;
+      isThrowing = true;
+      messagesEl.className = 'messages';
+      messagesEl.textContent = 'Throwing...';
+
+      // Reset dice position
+      diceContainer.style.transition = 'none';
+      diceContainer.style.transform = 'translateY(0) rotate(0deg)';
+
+      // Force reflow
+      void diceContainer.offsetWidth;
+
+      // Simple physics simulation logic for the throw
+      // We'll give it a chance to be a "Short Roll" (e.g., 10% chance)
+      const isShortRoll = Math.random() < 0.1;
+
+      // Animate the throw
+      diceContainer.style.transition = 'transform 0.8s cubic-bezier(0.25, 1, 0.5, 1)';
+
+      // "wall" is at the top of the play-area.
+      // We translate the dice container upwards.
+      const throwDistance = isShortRoll ? -150 : -350; // -350 hits the wall in our layout, -150 falls short
+      const rotation = Math.floor(Math.random() * 360) + 360;
+
+      diceContainer.style.transform = `translateY(${throwDistance}px) rotate(${rotation}deg)`;
+
+      setTimeout(() => {
+        if (isShortRoll) {
+          messagesEl.textContent = 'Short Roll! Dice must hit the wall. Try again.';
+          messagesEl.className = 'messages short-roll';
+        } else {
+          // Valid roll
+          const d1 = Math.floor(Math.random() * 6) + 1;
+          const d2 = Math.floor(Math.random() * 6) + 1;
+
+          die1El.textContent = d1;
+          die2El.textContent = d2;
+
+          const result = game.handleRoll(d1, d2);
+          updateUI(result);
+        }
+
+        // Reset dice position after a delay
+        setTimeout(() => {
+          diceContainer.style.transition = 'transform 0.5s ease-in';
+          diceContainer.style.transform = 'translateY(0) rotate(0deg)';
+          setTimeout(() => {
+            isThrowing = false;
+          }, 500);
+        }, 1500);
+
+      }, 800); // Wait for throw animation to finish
+    }
+
+    throwBtn.addEventListener('click', throwDice);
+
+  </script>
+</body>
+</html>
