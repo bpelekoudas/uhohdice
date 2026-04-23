@@ -30,6 +30,10 @@
     <div class="play-area" id="play-area">
       <div class="wall" id="wall">WALL (Hit this!)</div>
 
+      <!-- Overlays for Win / Loss -->
+      <img src="https://media.giphy.com/media/hrQnFqUKTXwSSvH8AI/giphy.gif" alt="Winner Rain" class="overlay hidden" id="overlay-win">
+      <img src="assets/loser.png" alt="Loser" class="overlay hidden" id="overlay-loss">
+
       <div class="dice-container" id="dice-container">
         <div class="scene">
           <div class="die" id="die1">
@@ -79,6 +83,8 @@
     const playArea = document.getElementById('play-area');
     const wall = document.getElementById('wall');
     const wagerInput = document.getElementById('wager-input');
+    const overlayWin = document.getElementById('overlay-win');
+    const overlayLoss = document.getElementById('overlay-loss');
 
     let isThrowing = false;
 
@@ -87,11 +93,17 @@
       pointEl.textContent = result.point === null ? 'None' : result.point;
       messagesEl.textContent = result.message;
 
-      // Add a class for visual feedback based on win/loss
+      // Hide overlays by default
+      overlayWin.classList.add('hidden');
+      overlayLoss.classList.add('hidden');
+
+      // Add a class for visual feedback based on win/loss and show overlays
       if (result.status === 'WIN') {
         messagesEl.className = 'messages win';
+        overlayWin.classList.remove('hidden');
       } else if (result.status === 'LOSS') {
         messagesEl.className = 'messages loss';
+        overlayLoss.classList.remove('hidden');
       } else {
         messagesEl.className = 'messages';
       }
@@ -128,6 +140,10 @@
       isThrowing = true;
       messagesEl.className = 'messages';
       messagesEl.textContent = 'Throwing...';
+
+      // Hide overlays as soon as a new throw starts
+      overlayWin.classList.add('hidden');
+      overlayLoss.classList.add('hidden');
 
       // Decide result early so we can compute target rotation
       const isShortRoll = Math.random() < 0.1;
