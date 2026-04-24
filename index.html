@@ -198,7 +198,6 @@
       if(overlayText) overlayText.classList.add('hidden');
 
       // Decide result early so we can compute target rotation
-      const isShortRoll = Math.random() < 0.1;
       const d1 = Math.floor(Math.random() * 6) + 1;
       const d2 = Math.floor(Math.random() * 6) + 1;
 
@@ -221,7 +220,7 @@
       // The dice container moves up quickly, mimicking a strong throw
       diceContainer.style.transition = 'transform 0.4s ease-out';
 
-      const throwDistance = isShortRoll ? -150 : -290; // -290 hits the wall, -150 falls short
+      const throwDistance = -290; // Always hits the wall
       diceContainer.style.transform = `translateY(${throwDistance}px)`;
 
       // Both dice spin fast initially
@@ -237,10 +236,36 @@
 
       // When the dice reach the wall (after 400ms)
       setTimeout(() => {
-        if (isShortRoll) {
-          // Short rolls just stop, no bounce off wall
-          messagesEl.textContent = 'Short Roll! Dice must hit the wall. Try again.';
-          messagesEl.className = 'messages short-roll';
+        // 2. Bounce off the wall
+        // Slower bounce back down into the play area
+        diceContainer.style.transition = 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)';
+        diceContainer.style.transform = `translateY(-100px)`; // Bounce back to mid-screen
+
+        // Slow down the tumbling to the final face
+        die1El.style.transition = 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)';
+        die2El.style.transition = 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)';
+
+        // Final target rotations including an extra 360 spin during the bounce
+        const finalTumble1 = { x: rot1.x + 720, y: rot1.y + 720 };
+        const finalTumble2 = { x: rot2.x + 720, y: rot2.y - 720 };
+
+        die1El.style.transform = `rotateX(${finalTumble1.x}deg) rotateY(${finalTumble1.y}deg)`;
+        die2El.style.transform = `rotateX(${finalTumble2.x}deg) rotateY(${finalTumble2.y}deg)`;
+
+        // Wait for bounce to finish (600ms) before evaluating result
+        setTimeout(() => {
+          // Read the wager amount from the input field
+          let wagerAmount = parseInt(wagerInput.value, 10);
+          if (isNaN(wagerAmount) || wagerAmount < 1) wagerAmount = 1;
+
+          // Prevent betting more than available bankroll
+          if (wagerAmount > game.bankroll && game.point === null) {
+            wagerAmount = game.bankroll;
+            wagerInput.value = wagerAmount;
+          }
+
+          const result = game.handleRoll(d1, d2, wagerAmount);
+          updateUI(result);
 
           // Reset dice container position after a delay
           setTimeout(() => {
@@ -249,47 +274,7 @@
             setTimeout(() => { isThrowing = false; }, 500);
           }, 1500);
 
-        } else {
-          // 2. Bounce off the wall
-          // Slower bounce back down into the play area
-          diceContainer.style.transition = 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)';
-          diceContainer.style.transform = `translateY(-100px)`; // Bounce back to mid-screen
-
-          // Slow down the tumbling to the final face
-          die1El.style.transition = 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)';
-          die2El.style.transition = 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)';
-
-          // Final target rotations including an extra 360 spin during the bounce
-          const finalTumble1 = { x: rot1.x + 720, y: rot1.y + 720 };
-          const finalTumble2 = { x: rot2.x + 720, y: rot2.y - 720 };
-
-          die1El.style.transform = `rotateX(${finalTumble1.x}deg) rotateY(${finalTumble1.y}deg)`;
-          die2El.style.transform = `rotateX(${finalTumble2.x}deg) rotateY(${finalTumble2.y}deg)`;
-
-          // Wait for bounce to finish (600ms) before evaluating result
-          setTimeout(() => {
-            // Read the wager amount from the input field
-            let wagerAmount = parseInt(wagerInput.value, 10);
-            if (isNaN(wagerAmount) || wagerAmount < 1) wagerAmount = 1;
-
-            // Prevent betting more than available bankroll
-            if (wagerAmount > game.bankroll && game.point === null) {
-              wagerAmount = game.bankroll;
-              wagerInput.value = wagerAmount;
-            }
-
-            const result = game.handleRoll(d1, d2, wagerAmount);
-            updateUI(result);
-
-            // Reset dice container position after a delay
-            setTimeout(() => {
-              diceContainer.style.transition = 'transform 0.5s ease-in';
-              diceContainer.style.transform = 'translateY(0)';
-              setTimeout(() => { isThrowing = false; }, 500);
-            }, 1500);
-
-          }, 600); // Wait for bounce animation
-        }
+        }, 600); // Wait for bounce animation
       }, 400); // Wait for initial throw to hit wall
     }
 
