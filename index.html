@@ -7,13 +7,33 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- Onboarding Modal -->
+  <div id="onboarding-modal" class="onboarding-modal hidden">
+    <div class="modal-content">
+      <h2>Welcome Shooter</h2>
+      <p>Enter your street name:</p>
+      <input type="text" id="player-name-input" placeholder="Name..." maxlength="12">
+      <button id="start-game-btn">Hit the Street</button>
+    </div>
+  </div>
+
+  <!-- Top Status Bar -->
+  <div class="status-bar" id="status-bar">
+    <div class="status-info">
+      <span>Player: <span id="status-player">Guest</span></span>
+      <span>|</span>
+      <span class="status-bankroll" id="status-bankroll-display">Bankroll: $<span id="status-bankroll-val">500</span></span>
+    </div>
+    <button class="reset-btn" id="reset-profile-btn">Reset Profile</button>
+  </div>
+
   <div class="game-container">
     <div class="header">
       <h1>Uh Oh Dice</h1>
       <div class="stats">
         <div class="stat-box">
           <span class="label">Bankroll:</span>
-          <span id="bankroll" class="value">$1000</span>
+          <span class="value" id="bankroll">$500</span>
         </div>
         <div class="stat-box">
           <span class="label">Point:</span>
@@ -77,6 +97,13 @@
     // UI Elements
     const bankrollEl = document.getElementById('bankroll');
     const pointEl = document.getElementById('point');
+    const statusPlayerEl = document.getElementById('status-player');
+    const statusBankrollValEl = document.getElementById('status-bankroll-val');
+    const statusBankrollDisplayEl = document.getElementById('status-bankroll-display');
+    const onboardingModal = document.getElementById('onboarding-modal');
+    const playerNameInput = document.getElementById('player-name-input');
+    const startGameBtn = document.getElementById('start-game-btn');
+    const resetProfileBtn = document.getElementById('reset-profile-btn');
     const messagesEl = document.getElementById('messages');
     const throwBtn = document.getElementById('throw-btn');
     const diceContainer = document.getElementById('dice-container');
@@ -93,6 +120,7 @@
 
     function updateUI(result) {
       bankrollEl.textContent = `$${result.bankroll}`;
+      statusBankrollValEl.textContent = result.bankroll;
       pointEl.textContent = result.point === null ? 'None' : result.point;
       messagesEl.textContent = result.message;
 
@@ -102,10 +130,16 @@
       if(overlayText) overlayText.classList.add('hidden');
 
       // Add a class for visual feedback based on win/loss and show overlays
+      // Clear previous flash animations
+      statusBankrollDisplayEl.classList.remove('flash-win', 'flash-loss');
+      // Trigger reflow
+      void statusBankrollDisplayEl.offsetWidth;
+
       const wagerAmount = parseInt(wagerInput.value, 10) || 0;
       if (result.status === 'WIN') {
         messagesEl.className = 'messages win-text';
         overlayWin.classList.remove('hidden');
+        statusBankrollDisplayEl.classList.add('flash-win');
         if(overlayText) {
           overlayText.textContent = `+$${wagerAmount}`;
           overlayText.className = 'overlay-text win';
@@ -114,6 +148,7 @@
       } else if (result.status === 'LOSS') {
         messagesEl.className = 'messages loss-text';
         overlayLoss.classList.remove('hidden');
+        statusBankrollDisplayEl.classList.add('flash-loss');
         if(overlayText) {
           overlayText.textContent = `-$${wagerAmount}`;
           overlayText.className = 'overlay-text loss';
@@ -258,11 +293,42 @@
       }, 400); // Wait for initial throw to hit wall
     }
 
+    // --- Onboarding & Profile Logic ---
+    function checkProfile() {
+      if (!game.playerName) {
+        onboardingModal.classList.remove('hidden');
+      } else {
+        onboardingModal.classList.add('hidden');
+        statusPlayerEl.textContent = game.playerName;
+      }
+    }
+
+    startGameBtn.addEventListener('click', () => {
+      const name = playerNameInput.value.trim();
+      if (name) {
+        game.setPlayerProfile(name, 500);
+        checkProfile();
+        updateUI({ bankroll: game.bankroll, point: game.point, message: `Welcome to the street, ${name}!`, status: 'CONTINUE' });
+      } else {
+        alert("Please enter a name.");
+      }
+    });
+
+    resetProfileBtn.addEventListener('click', () => {
+      if (confirm("Are you sure you want to reset your profile and bankroll?")) {
+        game.resetProfile();
+        playerNameInput.value = '';
+        checkProfile();
+        updateUI({ bankroll: game.bankroll, point: game.point, message: 'Profile reset. Enter a new name.', status: 'CONTINUE' });
+      }
+    });
+
     // Initialize UI on load so wager field acts correctly initially
+    checkProfile();
     updateUI({
       bankroll: game.bankroll,
       point: game.point,
-      message: 'Set your wager and hit the wall!',
+      message: game.playerName ? `Welcome back, ${game.playerName}! Set your wager and hit the wall!` : 'Set your wager and hit the wall!',
       status: 'CONTINUE'
     });
 

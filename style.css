@@ -9,10 +9,124 @@ body {
   background-color: #1a1a1a;
   color: #e0e0e0;
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   min-height: 100vh;
   margin: 0;
+}
+
+/* Top Status Bar */
+.status-bar {
+  width: 100%;
+  max-width: 400px;
+  background-color: #2a2a2a;
+  padding: 10px 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-sizing: border-box;
+  border-bottom: 2px solid #ff6600;
+  font-weight: bold;
+}
+
+.status-info {
+  display: flex;
+  gap: 15px;
+}
+
+.status-bankroll {
+  transition: color 0.3s ease-in-out;
+}
+
+.flash-win {
+  color: #4caf50;
+  animation: flashWin 0.5s ease-in-out;
+}
+
+.flash-loss {
+  color: #f44336;
+  animation: flashLoss 0.5s ease-in-out;
+}
+
+@keyframes flashWin {
+  0%, 100% { color: inherit; }
+  50% { color: #4caf50; text-shadow: 0 0 10px #4caf50; }
+}
+
+@keyframes flashLoss {
+  0%, 100% { color: inherit; }
+  50% { color: #f44336; text-shadow: 0 0 10px #f44336; }
+}
+
+.reset-btn {
+  background: none;
+  border: 1px solid #777;
+  color: #ccc;
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 0.8rem;
+  border-radius: 4px;
+}
+.reset-btn:hover {
+  background: #444;
+  color: #fff;
+}
+
+/* Onboarding Modal */
+.onboarding-modal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.onboarding-modal.hidden {
+  display: none;
+}
+
+.modal-content {
+  background: #222;
+  border: 2px solid #ff6600;
+  padding: 30px;
+  border-radius: 8px;
+  text-align: center;
+  max-width: 300px;
+  width: 90%;
+}
+
+.modal-content h2 {
+  margin-top: 0;
+  color: #ff6600;
+}
+
+.modal-content input {
+  width: 100%;
+  padding: 10px;
+  margin: 15px 0;
+  box-sizing: border-box;
+  background: #333;
+  color: #fff;
+  border: 1px solid #555;
+  font-size: 1rem;
+}
+
+.modal-content button {
+  background-color: #ff6600;
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  border-radius: 4px;
+  width: 100%;
+}
+.modal-content button:hover {
+  background-color: #cc5200;
 }
 
 .game-container {

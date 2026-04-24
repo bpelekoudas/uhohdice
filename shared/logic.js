@@ -1,9 +1,43 @@
 export class GameState {
-  constructor(initialBankroll = 1000) {
-    this.bankroll = initialBankroll;
+  constructor(initialBankroll = 500) {
+    let storedName = null;
+    let storedBankroll = null;
+    if (typeof localStorage !== 'undefined') {
+      storedName = localStorage.getItem('playerName');
+      storedBankroll = localStorage.getItem('currentBankroll');
+    }
+
+    this.playerName = storedName || null;
+    this.bankroll = storedBankroll ? parseInt(storedBankroll, 10) : initialBankroll;
+
     this.point = null;
     this.history = [];
     this.lastResult = null;
+  }
+
+  setPlayerProfile(name, startingBankroll = 500) {
+    this.playerName = name;
+    this.bankroll = startingBankroll;
+    this.persist();
+  }
+
+  resetProfile() {
+    this.playerName = null;
+    this.bankroll = 500;
+    this.point = null;
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('playerName');
+      localStorage.removeItem('currentBankroll');
+    }
+  }
+
+  persist() {
+    if (typeof localStorage !== 'undefined') {
+      if (this.playerName) {
+        localStorage.setItem('playerName', this.playerName);
+      }
+      localStorage.setItem('currentBankroll', this.bankroll.toString());
+    }
   }
 
   // Handle a valid roll (only called if dice hit the wall)
@@ -57,6 +91,7 @@ export class GameState {
     };
 
     this.history.push(this.lastResult);
+    this.persist(); // save updated bankroll
     return this.lastResult;
   }
 
