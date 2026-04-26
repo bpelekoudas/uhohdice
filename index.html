@@ -7,40 +7,35 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
   <!-- Onboarding Modal -->
   <div id="onboarding-modal" class="onboarding-modal hidden">
     <div class="modal-content">
-      <h2>Welcome Shooter</h2>
-      <p>Enter your street name:</p>
+      <h2>Welcome to the Street</h2>
+      <div id="player-list-setup"></div>
+      <p>Add a player:</p>
       <input type="text" id="player-name-input" placeholder="Name..." maxlength="12">
-      <button id="start-game-btn">Hit the Street</button>
+      <button id="add-player-btn" style="margin-bottom: 10px;">Add Player</button>
+      <button id="start-game-btn" disabled>Start Game</button>
     </div>
   </div>
+
+
 
   <!-- Top Status Bar -->
   <div class="status-bar" id="status-bar">
     <div class="status-info">
-      <span>Player: <span id="status-player">Guest</span></span>
+      <span>Shooter: <span id="status-player" style="color: #ff6600;">None</span></span>
       <span>|</span>
-      <span class="status-bankroll" id="status-bankroll-display">Bankroll: $<span id="status-bankroll-val">500</span></span>
+      <span>Pot: $<span id="status-pot-val">0</span></span>
+      <span>|</span>
+      <span>Point: <span id="point" style="color: #4caf50;">None</span></span>
     </div>
     <button class="reset-btn" id="reset-profile-btn">Reset Profile</button>
   </div>
 
   <div class="game-container">
-    <div class="header">
-      <h1>Uh Oh Dice</h1>
-      <div class="stats">
-        <div class="stat-box">
-          <span class="label">Bankroll:</span>
-          <span class="value" id="bankroll">$500</span>
-        </div>
-        <div class="stat-box">
-          <span class="label">Point:</span>
-          <span id="point" class="value">None</span>
-        </div>
-      </div>
-    </div>
+    <div class="player-dashboard" id="player-dashboard"></div>
 
     <div class="messages" id="messages">
       Ready to roll? Hit the wall to count!
@@ -80,13 +75,27 @@
       </div>
     </div>
 
-    <div class="controls">
-      <div class="wager-container">
-        <label for="wager-input" class="wager-label">Wager: $</label>
-        <input type="number" id="wager-input" class="wager-input" value="10" min="1" step="1">
+
+    <div class="controls" id="betting-controls">
+      <div class="shooter-betting" id="shooter-betting">
+        <label>Set Center Bet: $</label>
+        <input type="number" id="center-bet-input" value="50" min="1" step="1">
+        <button id="set-bet-btn">Set Bet</button>
+        <button id="pass-dice-btn">Pass Dice</button>
       </div>
-      <button id="throw-btn" class="throw-btn">THROW DICE</button>
+      <div class="fader-betting hidden" id="fader-betting">
+        <label>Fade Amount: $</label>
+        <input type="number" id="fade-input" value="50" min="1" step="1">
+        <select id="fader-select"></select>
+        <button id="add-fade-btn">Fade</button>
+      </div>
+      <div class="post-win-controls hidden" id="post-win-controls">
+        <button id="let-it-ride-btn">Let it Ride</button>
+        <button id="clear-bet-btn">Clear Bet</button>
+      </div>
+      <button id="throw-btn" class="throw-btn" disabled>THROW DICE</button>
     </div>
+
   </div>
 
   <script type="module">
@@ -94,82 +103,142 @@
 
     const game = new GameState();
 
+
     // UI Elements
-    const bankrollEl = document.getElementById('bankroll');
     const pointEl = document.getElementById('point');
     const statusPlayerEl = document.getElementById('status-player');
-    const statusBankrollValEl = document.getElementById('status-bankroll-val');
-    const statusBankrollDisplayEl = document.getElementById('status-bankroll-display');
+    const statusPotValEl = document.getElementById('status-pot-val');
     const onboardingModal = document.getElementById('onboarding-modal');
+    const playerListSetup = document.getElementById('player-list-setup');
     const playerNameInput = document.getElementById('player-name-input');
+    const addPlayerBtn = document.getElementById('add-player-btn');
     const startGameBtn = document.getElementById('start-game-btn');
     const resetProfileBtn = document.getElementById('reset-profile-btn');
+
     const messagesEl = document.getElementById('messages');
     const throwBtn = document.getElementById('throw-btn');
     const diceContainer = document.getElementById('dice-container');
     const die1El = document.getElementById('die1');
     const die2El = document.getElementById('die2');
-    const playArea = document.getElementById('play-area');
-    const wall = document.getElementById('wall');
-    const wagerInput = document.getElementById('wager-input');
     const overlayWin = document.getElementById('overlay-win');
     const overlayLoss = document.getElementById('overlay-loss');
     const overlayText = document.getElementById('overlay-text');
+    const playerDashboard = document.getElementById('player-dashboard');
+
+    const shooterBetting = document.getElementById('shooter-betting');
+    const centerBetInput = document.getElementById('center-bet-input');
+    const setBetBtn = document.getElementById('set-bet-btn');
+
+    const faderBetting = document.getElementById('fader-betting');
+    const fadeInput = document.getElementById('fade-input');
+    const faderSelect = document.getElementById('fader-select');
+    const addFadeBtn = document.getElementById('add-fade-btn');
+
+    const postWinControls = document.getElementById('post-win-controls');
+    const letItRideBtn = document.getElementById('let-it-ride-btn');
+    const clearBetBtn = document.getElementById('clear-bet-btn');
 
     let isThrowing = false;
+    let tempPlayers = [];
+
+    function renderDashboard() {
+      playerDashboard.innerHTML = '';
+      game.players.forEach((p, idx) => {
+        const card = document.createElement('div');
+        card.className = `player-card ${idx === game.shooterIndex ? 'is-shooter' : ''}`;
+
+        let fadeAmount = game.fades[idx] || 0;
+        let fadeText = fadeAmount > 0 ? ` (Fade: $${fadeAmount})` : '';
+
+        card.textContent = `${p.name}: $${p.bankroll}${fadeText}`;
+        playerDashboard.appendChild(card);
+      });
+    }
+
+    function populateFaderSelect() {
+      faderSelect.innerHTML = '';
+      game.players.forEach((p, idx) => {
+        if (idx !== game.shooterIndex && p.bankroll > 0) {
+          const opt = document.createElement('option');
+          opt.value = idx;
+          opt.textContent = p.name;
+          faderSelect.appendChild(opt);
+        }
+      });
+    }
 
     function updateUI(result) {
-      bankrollEl.textContent = `$${result.bankroll}`;
-      statusBankrollValEl.textContent = result.bankroll;
-      pointEl.textContent = result.point === null ? 'None' : result.point;
-      messagesEl.textContent = result.message;
+      renderDashboard();
 
-      // Hide overlays by default
+      const shooter = game.getShooter();
+      if(shooter) {
+          statusPlayerEl.textContent = shooter.name;
+      }
+
+      const totalFaded = game.getTotalFaded();
+      statusPotValEl.textContent = totalFaded + Math.min(game.centerBet, totalFaded);
+
+      pointEl.textContent = game.point === null ? 'None' : game.point;
+
+      if(result && result.message) {
+          messagesEl.textContent = result.message;
+      }
+
       overlayWin.classList.add('hidden');
       overlayLoss.classList.add('hidden');
       if(overlayText) overlayText.classList.add('hidden');
 
-      // Add a class for visual feedback based on win/loss and show overlays
-      // Clear previous flash animations
-      statusBankrollDisplayEl.classList.remove('flash-win', 'flash-loss');
-      // Trigger reflow
-      void statusBankrollDisplayEl.offsetWidth;
-
-      const wagerAmount = parseInt(wagerInput.value, 10) || 0;
-      if (result.status === 'WIN') {
-        messagesEl.className = 'messages win-text';
-        overlayWin.classList.remove('hidden');
-        statusBankrollDisplayEl.classList.add('flash-win');
-        if(overlayText) {
-          overlayText.textContent = `+$${wagerAmount}`;
-          overlayText.className = 'overlay-text win';
-          overlayText.classList.remove('hidden');
-        }
-      } else if (result.status === 'LOSS') {
-        messagesEl.className = 'messages loss-text';
-        overlayLoss.classList.remove('hidden');
-        statusBankrollDisplayEl.classList.add('flash-loss');
-        if(overlayText) {
-          overlayText.textContent = `-$${wagerAmount}`;
-          overlayText.className = 'overlay-text loss';
-          overlayText.classList.remove('hidden');
-        }
-      } else {
-        messagesEl.className = 'messages';
-        if(overlayText) overlayText.classList.add('hidden');
+      if (result) {
+          const actualBet = result.actualBet || 0;
+          if (result.status === 'WIN') {
+            messagesEl.className = 'messages win-text';
+            overlayWin.classList.remove('hidden');
+            if(overlayText) {
+              overlayText.textContent = `+$${actualBet}`;
+              overlayText.className = 'overlay-text win';
+              overlayText.classList.remove('hidden');
+            }
+          } else if (result.status === 'LOSS') {
+            messagesEl.className = 'messages loss-text';
+            overlayLoss.classList.remove('hidden');
+            if(overlayText) {
+              overlayText.textContent = `-$${actualBet}`;
+              overlayText.className = 'overlay-text loss';
+              overlayText.classList.remove('hidden');
+            }
+          } else {
+            messagesEl.className = 'messages';
+          }
       }
 
-      // Handle wager input state
-      if (result.point !== null) {
-        // Point is set, disable wager changing during the round
-        wagerInput.disabled = true;
-      } else {
-        // Round is over (or hasn't started), allow wagering
-        wagerInput.disabled = false;
+      // Betting state management
+      shooterBetting.classList.add('hidden');
+      faderBetting.classList.add('hidden');
+      postWinControls.classList.add('hidden');
+      throwBtn.disabled = true;
 
-        // Optional: Ensure wager doesn't exceed new bankroll
-        if (parseInt(wagerInput.value) > result.bankroll) {
-           wagerInput.value = result.bankroll;
+      if (game.point !== null) {
+        // Round in progress
+        throwBtn.disabled = false;
+        messagesEl.textContent = `Point is ${game.point}. Throw the dice!`;
+      } else if (result && result.status === 'WIN') {
+        postWinControls.classList.remove('hidden');
+      } else {
+        // Needs a bet
+        if (game.centerBet === 0) {
+          shooterBetting.classList.remove('hidden');
+        } else {
+          faderBetting.classList.remove('hidden');
+          const remaining = game.centerBet - totalFaded;
+          messagesEl.textContent = `$${remaining} left to fade.`;
+
+          if (totalFaded >= game.centerBet) {
+             throwBtn.disabled = false;
+             messagesEl.textContent = "Bet fully faded! Throw the dice!";
+             faderBetting.classList.add('hidden');
+          } else if (totalFaded > 0) {
+             throwBtn.disabled = false; // Allow partial fades
+          }
         }
       }
     }
@@ -177,11 +246,11 @@
     function getRotation(value) {
       switch (value) {
         case 1: return { x: 0, y: 0 };
-        case 2: return { x: 90, y: 0 };  // bottom face
-        case 3: return { x: 0, y: -90 }; // right face
-        case 4: return { x: 0, y: 90 };  // left face
-        case 5: return { x: -90, y: 0 }; // top face
-        case 6: return { x: 0, y: 180 }; // back face
+        case 2: return { x: 90, y: 0 };
+        case 3: return { x: 0, y: -90 };
+        case 4: return { x: 0, y: 90 };
+        case 5: return { x: -90, y: 0 };
+        case 6: return { x: 0, y: 180 };
         default: return { x: 0, y: 0 };
       }
     }
@@ -192,133 +261,140 @@
       messagesEl.className = 'messages';
       messagesEl.textContent = 'Throwing...';
 
-      // Hide overlays as soon as a new throw starts
       overlayWin.classList.add('hidden');
       overlayLoss.classList.add('hidden');
       if(overlayText) overlayText.classList.add('hidden');
 
-      // Decide result early so we can compute target rotation
       const d1 = Math.floor(Math.random() * 6) + 1;
       const d2 = Math.floor(Math.random() * 6) + 1;
-
       const rot1 = getRotation(d1);
       const rot2 = getRotation(d2);
 
-      // Reset container and dice position/rotation
       diceContainer.style.transition = 'none';
       diceContainer.style.transform = 'translateY(0)';
-
       die1El.style.transition = 'none';
       die1El.style.transform = `rotateX(0deg) rotateY(0deg)`;
       die2El.style.transition = 'none';
       die2El.style.transform = `rotateX(0deg) rotateY(0deg)`;
-
-      // Force reflow
       void diceContainer.offsetWidth;
 
-      // 1. Initial throw to the wall
-      // The dice container moves up quickly, mimicking a strong throw
       diceContainer.style.transition = 'transform 0.4s ease-out';
+      diceContainer.style.transform = `translateY(-290px)`;
 
-      const throwDistance = -290; // Always hits the wall
-      diceContainer.style.transform = `translateY(${throwDistance}px)`;
-
-      // Both dice spin fast initially
       die1El.style.transition = 'transform 0.4s linear';
       die2El.style.transition = 'transform 0.4s linear';
-
-      // Partial tumble during the throw to the wall
       const partialTumble1 = { x: rot1.x + 360, y: rot1.y + 360 };
       const partialTumble2 = { x: rot2.x + 360, y: rot2.y - 360 };
-
       die1El.style.transform = `rotateX(${partialTumble1.x}deg) rotateY(${partialTumble1.y}deg)`;
       die2El.style.transform = `rotateX(${partialTumble2.x}deg) rotateY(${partialTumble2.y}deg)`;
 
-      // When the dice reach the wall (after 400ms)
       setTimeout(() => {
-        // 2. Bounce off the wall
-        // Slower bounce back down into the play area
         diceContainer.style.transition = 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)';
-        diceContainer.style.transform = `translateY(-100px)`; // Bounce back to mid-screen
+        diceContainer.style.transform = `translateY(-100px)`;
 
-        // Slow down the tumbling to the final face
         die1El.style.transition = 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)';
         die2El.style.transition = 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)';
-
-        // Final target rotations including an extra 360 spin during the bounce
         const finalTumble1 = { x: rot1.x + 720, y: rot1.y + 720 };
         const finalTumble2 = { x: rot2.x + 720, y: rot2.y - 720 };
-
         die1El.style.transform = `rotateX(${finalTumble1.x}deg) rotateY(${finalTumble1.y}deg)`;
         die2El.style.transform = `rotateX(${finalTumble2.x}deg) rotateY(${finalTumble2.y}deg)`;
 
-        // Wait for bounce to finish (600ms) before evaluating result
         setTimeout(() => {
-          // Read the wager amount from the input field
-          let wagerAmount = parseInt(wagerInput.value, 10);
-          if (isNaN(wagerAmount) || wagerAmount < 1) wagerAmount = 1;
-
-          // Prevent betting more than available bankroll
-          if (wagerAmount > game.bankroll && game.point === null) {
-            wagerAmount = game.bankroll;
-            wagerInput.value = wagerAmount;
-          }
-
-          const result = game.handleRoll(d1, d2, wagerAmount);
+          const result = game.handleRoll(d1, d2);
           updateUI(result);
 
-          // Reset dice container position after a delay
           setTimeout(() => {
             diceContainer.style.transition = 'transform 0.5s ease-in';
             diceContainer.style.transform = 'translateY(0)';
             setTimeout(() => { isThrowing = false; }, 500);
           }, 1500);
-
-        }, 600); // Wait for bounce animation
-      }, 400); // Wait for initial throw to hit wall
+        }, 600);
+      }, 400);
     }
 
     // --- Onboarding & Profile Logic ---
     function checkProfile() {
-      if (!game.playerName) {
+      if (game.players.length < 2) {
         onboardingModal.classList.remove('hidden');
+        renderTempPlayers();
       } else {
         onboardingModal.classList.add('hidden');
-        statusPlayerEl.textContent = game.playerName;
+        populateFaderSelect();
       }
     }
 
-    startGameBtn.addEventListener('click', () => {
+    function renderTempPlayers() {
+        playerListSetup.innerHTML = tempPlayers.map(p => `<div>${p}</div>`).join('');
+        startGameBtn.disabled = tempPlayers.length < 2;
+    }
+
+    addPlayerBtn.addEventListener('click', () => {
       const name = playerNameInput.value.trim();
       if (name) {
-        game.setPlayerProfile(name, 500);
-        checkProfile();
-        updateUI({ bankroll: game.bankroll, point: game.point, message: `Welcome to the street, ${name}!`, status: 'CONTINUE' });
-      } else {
-        alert("Please enter a name.");
+          tempPlayers.push(name);
+          playerNameInput.value = '';
+          renderTempPlayers();
       }
+    });
+
+    startGameBtn.addEventListener('click', () => {
+        tempPlayers.forEach(name => game.addPlayer(name, 500));
+        tempPlayers = [];
+        checkProfile();
+        updateUI({ message: 'Game started. Shooter, set your bet!' });
     });
 
     resetProfileBtn.addEventListener('click', () => {
-      if (confirm("Are you sure you want to reset your profile and bankroll?")) {
+      if (confirm("Reset game completely?")) {
         game.resetProfile();
-        playerNameInput.value = '';
+        tempPlayers = [];
         checkProfile();
-        updateUI({ bankroll: game.bankroll, point: game.point, message: 'Profile reset. Enter a new name.', status: 'CONTINUE' });
       }
     });
 
-    // Initialize UI on load so wager field acts correctly initially
-    checkProfile();
-    updateUI({
-      bankroll: game.bankroll,
-      point: game.point,
-      message: game.playerName ? `Welcome back, ${game.playerName}! Set your wager and hit the wall!` : 'Set your wager and hit the wall!',
-      status: 'CONTINUE'
+    setBetBtn.addEventListener('click', () => {
+        const bet = parseInt(centerBetInput.value, 10);
+        if (bet > 0) {
+            game.setCenterBet(bet);
+            populateFaderSelect();
+            updateUI();
+        }
     });
+
+    const passDiceBtn = document.getElementById('pass-dice-btn');
+    passDiceBtn.addEventListener('click', () => {
+        game.passDice();
+        updateUI({ message: 'Dice passed to next player.' });
+    });
+
+
+    addFadeBtn.addEventListener('click', () => {
+        const pIdx = parseInt(faderSelect.value, 10);
+        const amt = parseInt(fadeInput.value, 10);
+        if (amt > 0) {
+            game.addFade(pIdx, amt);
+            updateUI();
+        }
+    });
+
+    letItRideBtn.addEventListener('click', () => {
+        game.letItRide();
+        updateUI();
+    });
+
+    clearBetBtn.addEventListener('click', () => {
+        game.clearBet();
+        updateUI();
+    });
+
+    checkProfile();
+    if(game.players.length >= 2) {
+       updateUI({ message: 'Welcome back. Shooter, set your bet!' });
+    }
 
     throwBtn.addEventListener('click', throwDice);
 
   </script>
+
 </body>
 </html>

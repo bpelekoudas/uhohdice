@@ -456,3 +456,40 @@ body {
   0% { transform: translate(-50%, -40%) scale(0.5); opacity: 0; }
   100% { transform: translate(-50%, -60%) scale(1); opacity: 1; }
 }
+.player-dashboard {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px;
+  background: #222;
+  border-bottom: 2px solid #444;
+}
+.player-card {
+  background: #333;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  border: 1px solid #555;
+}
+.player-card.is-shooter {
+  border-color: #ff6600;
+  box-shadow: 0 0 5px #ff6600;
+}
+#betting-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+#betting-controls > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.hidden { display: none !important; }
+#player-list-setup {
+  margin-bottom: 15px;
+  text-align: left;
+}
+#player-list-setup div {
+  background: #333; margin: 5px 0; padding: 5px; border-radius: 3px;
+}
